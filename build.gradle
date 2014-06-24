@@ -1,29 +1,55 @@
 buildscript {
-  repositories {
-    mavenCentral()
-    mavenLocal()
-  }
+    repositories {
+        mavenCentral()
+        mavenLocal()
+    }
 
-  dependencies {
-    classpath 'com.android.tools.build:gradle:0.9.+'
-    classpath 'com.github.dcendents:android-maven-plugin:1.0'
-    classpath 'com.jakewharton.sdkmanager:gradle-plugin:0.9.+'
-  }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:0.9.+'
+        classpath 'com.github.dcendents:android-maven-plugin:1.0'
+        classpath 'com.jakewharton.sdkmanager:gradle-plugin:0.9.+'
+    }
 }
-
+apply plugin: 'android-library'
 subprojects {
-  repositories {
-    mavenLocal()
-    mavenCentral()
-  }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
 
-  group = 'com.appboy'
-  version = '1.3.4'
+    group = 'com.appboy'
+    version = '1.3.4'
 
-  apply plugin: 'android-sdk-manager'
+    apply plugin: 'android-sdk-manager'
 }
+android {
+    compileSdkVersion 19
+    buildToolsVersion = 19
 
+    sourceSets {
+        defaultConfig {
+        }
+
+        main {
+            assets.srcDirs = ['android-sdk-ui/assets']
+            res.srcDirs = ['android-sdk-ui/res']
+            aidl.srcDirs = ['android-sdk-ui/src']
+            resources.srcDirs = ['android-sdk-ui/src']
+            renderscript.srcDirs = ['android-sdk-ui/src']
+            java.srcDirs = ['android-sdk-ui/src']
+            manifest.srcFile 'android-sdk-ui/AndroidManifest.xml'
+
+        }
+
+        instrumentTest.setRoot('tests')
+        instrumentTest.java.srcDirs = ['tests/src']
+    }
+}
 // Run 'gradle wrapper' to generate all of the wrapper files if you change this.
 task wrapper(type: Wrapper) {
-  gradleVersion = '1.11'
+    gradleVersion = '1.10'
+}
+dependencies {
+    compile files('android-sdk-ui/libs/appboy.jar')
+    compile files('android-sdk-ui/libs/support-v4-19.1.0.jar')
 }
