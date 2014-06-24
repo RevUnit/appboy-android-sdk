@@ -45,11 +45,11 @@ android {
         instrumentTest.java.srcDirs = ['tests/src']
     }
 }
+dependencies {
+    compile files('android-sdk-ui/libs/appboy.jar')
+    compile 'com.android.support:support-v4:19.0.+'
+}
 // Run 'gradle wrapper' to generate all of the wrapper files if you change this.
 task wrapper(type: Wrapper) {
     gradleVersion = '1.10'
-}
-dependencies {
-    compile files('android-sdk-ui/libs/appboy.jar')
-    compile files('android-sdk-ui/libs/support-v4-19.1.0.jar')
 }
