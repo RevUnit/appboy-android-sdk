@@ -2,27 +2,22 @@ package com.appboy.ui.adapters;
 
 import android.annotation.TargetApi;
 import android.content.Context;
-import android.util.Log;
+import com.appboy.support.AppboyLogger;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 
-import com.appboy.Appboy;
 import com.appboy.Constants;
-import com.appboy.models.cards.AppStoreReviewCard;
 import com.appboy.models.cards.BannerImageCard;
 import com.appboy.models.cards.CaptionedImageCard;
 import com.appboy.models.cards.Card;
-import com.appboy.models.cards.CrossPromotionLargeCard;
 import com.appboy.models.cards.CrossPromotionSmallCard;
 import com.appboy.models.cards.ShortNewsCard;
 import com.appboy.models.cards.TextAnnouncementCard;
 import com.appboy.ui.configuration.XmlUIConfigurationProvider;
-import com.appboy.ui.widget.AppStoreReviewCardView;
 import com.appboy.ui.widget.BannerImageCardView;
 import com.appboy.ui.widget.BaseCardView;
 import com.appboy.ui.widget.CaptionedImageCardView;
-import com.appboy.ui.widget.CrossPromotionLargeCardView;
 import com.appboy.ui.widget.CrossPromotionSmallCardView;
 import com.appboy.ui.widget.DefaultCardView;
 import com.appboy.ui.widget.ShortNewsCardView;
@@ -54,7 +49,7 @@ import java.util.Set;
  * {@link com.appboy.ui.adapters.AppboyListAdapter#replaceFeed(java.util.List)}
  */
 public class AppboyListAdapter extends ArrayAdapter<Card> {
-  private static final String TAG = String.format("%s.%s", Constants.APPBOY, AppboyListAdapter.class.getName());
+  private static final String TAG = String.format("%s.%s", Constants.APPBOY_LOG_TAG_PREFIX, AppboyListAdapter.class.getName());
 
   private final Context mContext;
   private final Set<String> mCardIdImpressions;
@@ -79,20 +74,16 @@ public class AppboyListAdapter extends ArrayAdapter<Card> {
   @Override
   public int getItemViewType(int position) {
     Card card = getItem(position);
-    if (card instanceof AppStoreReviewCard) {
+    if (card instanceof BannerImageCard) {
       return 1;
-    } else if (card instanceof BannerImageCard) {
-      return 2;
     } else if (card instanceof CaptionedImageCard) {
-      return 3;
-    } else if (card instanceof CrossPromotionLargeCard) {
-      return 4;
+      return 2;
     } else if (card instanceof CrossPromotionSmallCard) {
-      return 5;
+      return 3;
     } else if (card instanceof ShortNewsCard) {
-      return 6;
+      return 4;
     } else if (card instanceof TextAnnouncementCard) {
-      return 7;
+      return 5;
     } else {
       return 0;
     }
@@ -108,14 +99,10 @@ public class AppboyListAdapter extends ArrayAdapter<Card> {
     Card card = getItem(position);
 
     if (convertView == null) {
-      if (card instanceof AppStoreReviewCard) {
-        view = new AppStoreReviewCardView(mContext, mUiConfigurationProvider.getApplicationIconResourceId());
-      } else if (card instanceof BannerImageCard) {
+      if (card instanceof BannerImageCard) {
         view = new BannerImageCardView(mContext);
       } else if (card instanceof CaptionedImageCard) {
         view = new CaptionedImageCardView(mContext);
-      } else if (card instanceof CrossPromotionLargeCard) {
-        view = new CrossPromotionLargeCardView(mContext);
       } else if (card instanceof CrossPromotionSmallCard) {
         view = new CrossPromotionSmallCardView(mContext);
       } else if (card instanceof ShortNewsCard) {
@@ -126,20 +113,15 @@ public class AppboyListAdapter extends ArrayAdapter<Card> {
         view = new DefaultCardView(mContext);
       }
     } else {
-      Log.d(TAG, "Reusing convertView for rendering of item " + position);
+      AppboyLogger.d(TAG, "Reusing convertView for rendering of item " + position);
       view = (BaseCardView) convertView;
     }
 
-    Log.d(TAG, String.format("Using view of type: %s for card at position %d: %s", view.getClass().getName(),
+    AppboyLogger.d(TAG, String.format("Using view of type: %s for card at position %d: %s", view.getClass().getName(),
         position, card.toString()));
     view.setCard(card);
     logCardImpression(card);
     return view;
-  }
-
-  @Override
-  public synchronized void clear() {
-    super.clear();
   }
 
   public synchronized void replaceFeed(List<Card> cards) {
@@ -151,7 +133,7 @@ public class AppboyListAdapter extends ArrayAdapter<Card> {
       return;
     }
 
-    Log.d(TAG, String.format("Replacing existing feed of %d cards with new feed containing %d cards.",
+    AppboyLogger.d(TAG, String.format("Replacing existing feed of %d cards with new feed containing %d cards.",
       getCount(), cards.size()));
     int i = 0, j = 0, newFeedSize = cards.size();
     Card existingCard, newCard;
@@ -168,8 +150,7 @@ public class AppboyListAdapter extends ArrayAdapter<Card> {
       }
 
       // If there is still a card to add and it is the same as the next existing card in the feed, continue.
-      if (newCard != null && newCard.getId().equals(existingCard.getId()) &&
-        newCard.getUpdated() == existingCard.getUpdated()) {
+      if (newCard != null && newCard.isEqualToCard(existingCard)) {
         i++;
         j++;
       } else { // Otherwise, we need to get rid of the next card in the adapter, and continue checking.
@@ -211,14 +192,45 @@ public class AppboyListAdapter extends ArrayAdapter<Card> {
     String cardId = card.getId();
     if (!mCardIdImpressions.contains(cardId)) {
       mCardIdImpressions.add(cardId);
-      Appboy.getInstance(mContext).logFeedCardImpression(cardId);
-      Log.d(TAG, String.format("Logged impression for card %s", cardId));
+      card.logImpression();
+      AppboyLogger.d(TAG, String.format("Logged impression for card %s", cardId));
     } else {
-      Log.d(TAG, String.format("Already counted impression for card %s", cardId));
+      AppboyLogger.d(TAG, String.format("Already counted impression for card %s", cardId));
+    }
+    if (!card.getViewed()){
+      card.setViewed(true);
     }
   }
 
-  boolean hasCardImpression(String cardId) {
-    return mCardIdImpressions.contains(cardId);
+  /**
+   * Helper method to batch set cards to visually read after either an up or down scroll of the feed.
+   * Since scrolls can have multiple cards scrolled off screen at a time, this method can batch set those
+   * cards to read.
+   * @param startIndex Where to start setting cards to viewed. The card at this index will
+   *                   be set to viewed. Must be less than endIndex
+   * @param endIndex Where to end setting cards to viewed. The card at this index will be set to viewed.
+   */
+  public void batchSetCardsToRead(int startIndex, int endIndex){
+    if (getCount() == 0){
+      AppboyLogger.d(TAG, "mAdapter is empty in setting some cards to viewed.");
+      return;
+    }
+
+    // Make sure the start and end are in bounds
+    startIndex = Math.max(0, startIndex);
+    endIndex = Math.min(getCount(), endIndex);
+
+    for (int traversalIndex = startIndex; traversalIndex < endIndex; traversalIndex++){
+      // Get the card
+      Card card = getItem(traversalIndex);
+      if (card == null){
+        AppboyLogger.d(TAG, "Card was null in setting some cards to viewed.");
+        break;
+      }
+
+      if (!card.isRead()){
+        card.setIsRead(true);
+      }
+    }
   }
 }

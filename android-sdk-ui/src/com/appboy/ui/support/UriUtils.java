@@ -1,7 +1,7 @@
 package com.appboy.ui.support;
 
 import android.net.Uri;
-import android.util.Log;
+import com.appboy.support.AppboyLogger;
 
 import com.appboy.Constants;
 
@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class UriUtils {
-  private static final String TAG = String.format("%s.%s", Constants.APPBOY, UriUtils.class.getName());
+  private static final String TAG = String.format("%s.%s", Constants.APPBOY_LOG_TAG_PREFIX, UriUtils.class.getName());
 
   /**
    * Backport of the Uri.getQueryParameters method.
@@ -20,7 +20,7 @@ public class UriUtils {
    */
   public static Map<String, String> getQueryParameters(Uri uri) {
     if (uri.isOpaque()) {
-      Log.d(TAG, "URI is not hierarchical. There are no query parameters to parse.");
+      AppboyLogger.d(TAG, "URI is not hierarchical. There are no query parameters to parse.");
       return Collections.emptyMap();
     }
 
